@@ -6,7 +6,7 @@
 /*   By: mminet <mminet@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/11 13:35:08 by mminet            #+#    #+#             */
-/*   Updated: 2024/03/11 13:39:54 by mminet           ###   ########.fr       */
+/*   Updated: 2025/10/22 21:46:28 by mminet           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,7 +16,7 @@ void	ft_lstiter(t_list *lst, void (*f)(void *))
 {
 	while (lst)
 	{
-		f(lst->content);
+		f(&lst->content);
 		lst = lst->next;
 	}
 }

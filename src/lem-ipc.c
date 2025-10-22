@@ -108,6 +108,31 @@ int		shm_init(t_lem_ipc *all)
 	return (0);
 }
 
+// int		myBfs(int *map, int pos)
+// {
+// 	int	backPos[MAP_SIZE] = {-1};
+// 	t_list	*to_check;
+
+// 	backPos[pos] = pos;
+
+// 	ft_lstadd_back(&to_check, ft_lstnew(pos))
+// 	while (ft_lstsize(to_check))
+// 	{
+
+// 	}
+
+// }
+
+// void	move(t_lem_ipc *all)
+// {
+// 	int *mapSnap[MAP_SIZE];
+
+// 	sem_wait(all->semaphore);
+// 	ft_memcpy(mapSnap, all->map, MAP_SIZE);
+// 	sem_post(all->semaphore);
+	
+// }
+
 void	move(t_lem_ipc *all)
 {
 	int dx = (all->pos % MAP_WIDTH) + ((rand() % 3) - 1);
@@ -209,11 +234,11 @@ int main(int ac, char **av)
 {
 	t_lem_ipc	all;
 
+	srand(time(NULL) ^ getpid());
 	if (ac != 2 || ft_atoi(av[1]) < 1)
 		all.teamId = 42;
 	else
 		all.teamId = ft_atoi(av[1]);
-	srand(time(NULL) ^ getpid());
 	all.mapKey = ftok(SHM_KEY_PATH_MAP, SHM_KEY_ID);
 	all.semKey = ftok(SHM_KEY_PATH_SEM, SHM_KEY_ID + 1);
 	all.semId = shmget(all.semKey, sizeof(sem_t), 0666);
