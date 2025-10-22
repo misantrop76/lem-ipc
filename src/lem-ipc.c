@@ -82,6 +82,7 @@ int		getShm(t_lem_ipc *all)
 	all->map = (int *)shmat(all->mapId, NULL, 0);
 	if (all->semaphore == (sem_t *)(-1) || all->map == (int *)(-1))
 		exit (1);
+	//last_exit(all);
 	return (0);
 }
 
@@ -107,24 +108,111 @@ int		shm_init(t_lem_ipc *all)
 	return (0);
 }
 
-// int randomPos(int x, int y, int *map, sem_t *sem)
-// {
-// 	int a;
-// 	int random;
-// 	do
-// 	{
-// 		random = rand() % 3;
-// 		int dx = 
-// 		a = 
-// 		/* code */
-// 	} while (map[a] != 0);
-	
-// }
+void	move(t_lem_ipc *all)
+{
+	int dx = (all->pos % MAP_WIDTH) + ((rand() % 3) - 1);
+	int dy = (all->pos / MAP_WIDTH) + ((rand() % 3) - 1);
+	int newpos = (MAP_WIDTH * dy) + dx;
 
-int main()
+	sem_wait(all->semaphore);
+	while (dx < 0 || dx >= MAP_WIDTH || dy < 0 || dy >= MAP_HEIGHT || all->map[newpos] != 0)
+	{
+		dx = (all->pos % MAP_WIDTH) + ((rand() % 3) - 1);
+		dy = (all->pos / MAP_WIDTH) + ((rand() % 3) - 1);
+		newpos = (MAP_WIDTH * dy) + dx;
+	}
+	all->map[all->pos] = 0;
+	all->pos = newpos;
+	all->map[newpos] = all->teamId;
+	sem_post(all->semaphore);
+}
+
+void	my_sleep(unsigned long ms)
+{
+	struct timeval time;
+	gettimeofday(&time, NULL);
+	unsigned long start_ms = (time.tv_sec * 1000) + (time.tv_usec / 1000);
+	unsigned long now_ms = start_ms;
+	while (now_ms - start_ms < ms)
+	{
+		gettimeofday(&time, NULL);
+		now_ms = (time.tv_sec * 1000) + (time.tv_usec / 1000);
+	}
+}
+
+void	error_help()
+{
+	ft_putstr_fd("Error with arguments\n", 1);
+	ft_putstr_fd("Usage:\n", 1);
+	ft_putstr_fd("./lem-ipc team_ID\n", 1);
+	exit (1);
+}
+
+int is_last_team(t_lem_ipc *all)
+{
+	int firstVal = 0;
+
+	sem_wait(all->semaphore);
+	for (int i = 0; i < MAP_SIZE; i++)
+	{
+		if (firstVal == 0 && all->map[i] != 0)
+			firstVal = all->map[i];
+		if (firstVal != 0 && all->map[i] != firstVal && all->map[i] != 0)
+		{
+			sem_post(all->semaphore);
+			return (0);
+		}
+	}
+	sem_post(all->semaphore);
+	printMap(all->map, all->semaphore);
+	return (1);
+}
+
+int	is_dead(t_lem_ipc *all)
+{
+	int neightbors[8] = {0};
+	int x = all->pos % MAP_WIDTH;
+	int y = all->pos / MAP_WIDTH;
+	int posCheck;
+
+	sem_wait(all->semaphore);
+	for (int dx = -1; dx <= 1; dx++)
+	{
+		for (int dy = -1; dy <= 1; dy++)
+		{
+			if ((dx == 0 && dy == 0) || (dx + x) < 0 || (dy + y) < 0 || (dx + x) >= MAP_WIDTH || (dy + y) >= MAP_HEIGHT)
+				continue;
+			posCheck = ((dy + y) * MAP_WIDTH) + (dx + x);
+			if (all->map[posCheck] != 0 && all->map[posCheck] != all->teamId)
+			{
+				int i = 0;
+				while (i < 8 && neightbors[i] != 0)
+				{
+					if (neightbors[i] == all->map[posCheck])
+					{
+						sem_post(all->semaphore);
+						return (1);
+					}
+					i++;
+				}
+				if (i < 8 && neightbors[i] == 0)
+					neightbors[i] = all->map[posCheck];
+			}
+		}
+	}
+	sem_post(all->semaphore);
+	printMap(all->map, all->semaphore);
+	return (0);
+}
+
+int main(int ac, char **av)
 {
 	t_lem_ipc	all;
 
+	if (ac != 2 || ft_atoi(av[1]) < 1)
+		all.teamId = 42;
+	else
+		all.teamId = ft_atoi(av[1]);
 	srand(time(NULL) ^ getpid());
 	all.mapKey = ftok(SHM_KEY_PATH_MAP, SHM_KEY_ID);
 	all.semKey = ftok(SHM_KEY_PATH_SEM, SHM_KEY_ID + 1);
@@ -135,20 +223,23 @@ int main()
 	else
 		getShm(&all);
 
-	int pos = getPos(all.map, all.semaphore);
+	all.pos = getPos(all.map, all.semaphore);
 	sem_wait(all.semaphore);
-	all.map[pos] = 44;
+	all.map[all.pos] = all.teamId;
 	sem_post(all.semaphore);
-	// for (int a = 0; a < 20; a++)
-	// {
-	// 	pos = randomPos();
-	// 	printMap(all.map, all.semaphore);
-	// 	sleep(1);
-	// }
+	while (is_last_team(&all))
+		my_sleep(100);
+	while (!is_dead(&all) && !is_last_team(&all))
+	{
+		my_sleep(100);
+		move(&all);
+		printMap(all.map, all.semaphore);
+		my_sleep(100);
+	}
 	if (is_last(all.map, all.semaphore))
 		last_exit(&all);
 	sem_wait(all.semaphore);
-	all.map[pos] = 0;
+	all.map[all.pos] = 0;
 	sem_post(all.semaphore);
 	return (0);
 }

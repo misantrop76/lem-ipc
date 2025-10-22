@@ -8,11 +8,13 @@
 #include <string.h>
 #include <unistd.h>
 #include <time.h>
+#include <sys/time.h>
 #include <errno.h>
 #include <semaphore.h>
+#include "../libft/libft.h"
 
-# define MAP_WIDTH 20
-# define MAP_HEIGHT 20
+# define MAP_WIDTH 25
+# define MAP_HEIGHT 25
 # define MAP_SIZE MAP_HEIGHT * MAP_WIDTH
 # define SHM_KEY_PATH_MAP "/tmp"
 # define SHM_KEY_PATH_SEM "/tmp"
@@ -27,7 +29,8 @@ typedef struct	s_lem_ipc
 	int			*map;
 	int			mapId;
 	key_t		mapKey;
-	int			is_creator;
+	int			pos;
+	int			teamId;
 }				t_lem_ipc;
 
 
