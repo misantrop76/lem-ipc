@@ -20,7 +20,14 @@
 # define SHM_KEY_PATH_SEM "/tmp"
 # define SHM_KEY_ID 65
 
-typedef struct	s_lem_ipc
+typedef struct s_room
+{
+	int		pos;
+	int		prevPos;
+	int		isVisited;
+}				t_room;
+
+typedef struct	t_lem_ipc
 {
 
 	sem_t		*semaphore;

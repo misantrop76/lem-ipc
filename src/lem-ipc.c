@@ -63,10 +63,8 @@ int		getPos(int *map, sem_t *sem)
 
 	sem_wait(sem);
 	do
-	{
 		random = rand() % (MAP_SIZE - 1);
-
-	} while (map[random] != 0);
+	while (map[random] != 0);
 	sem_post(sem);
 	return (random);
 }
@@ -108,29 +106,132 @@ int		shm_init(t_lem_ipc *all)
 	return (0);
 }
 
-// int		myBfs(int *map, int pos)
-// {
-// 	int	backPos[MAP_SIZE] = {-1};
-// 	t_list	*to_check;
+int		isInContact(int pos, int checkPos)
+{
+	int x = pos % MAP_WIDTH;
+	int y = pos / MAP_WIDTH;
+	int checkX = checkPos % MAP_WIDTH;
+	int checkY = checkPos / MAP_WIDTH;
 
-// 	backPos[pos] = pos;
+	if (checkX < x - 1 || checkX > x + 1 || checkY < y - 1 || checkY > y + 1)
+		return (0);
+	return (1);
+}
 
-// 	ft_lstadd_back(&to_check, ft_lstnew(pos))
-// 	while (ft_lstsize(to_check))
-// 	{
+int		isInToCheck(int pos, t_list *to_check)
+{
+	t_list *tmp;
 
-// 	}
+	tmp = to_check;
+	while (tmp)
+	{
+		t_room *room = (t_room *)tmp->content;
+		if (room->pos == pos)
+			return (1);
+		tmp = tmp->next;
+	}
+	return (0);
+}
 
-// }
+t_room	*GetNewMapRoom(int pos)
+{
+	t_room *newMapRoom;
+
+	newMapRoom = malloc(sizeof(t_room) * MAP_SIZE);
+	for (int a = 0; a < MAP_SIZE; a++)
+	{
+		newMapRoom[a].isVisited = 0;
+		newMapRoom[a].pos = a;
+		newMapRoom[a].prevPos = -1;
+	}
+	newMapRoom[pos].isVisited = 1;
+	newMapRoom[pos].prevPos = pos;
+	return (newMapRoom);
+}
+
+int		getFirstPos(int TargetPos, int pos, t_room *mapRoom)
+{
+	int newPos = TargetPos;
+
+	while (mapRoom[newPos].prevPos != pos)
+		newPos = mapRoom[newPos].prevPos;
+	return (newPos);
+}
+
+void	addNeightborsToCheck(t_list **lst, int pos, t_room *mapRoom)
+{
+	int x = pos % MAP_WIDTH;
+	int y = pos / MAP_WIDTH;
+
+	for (int dx = -1; dx <=1; dx++)
+	{
+		for (int dy = -1; dy <=1; dy++)
+		{
+			int nx = dx + x;
+			int ny = dy + y;
+			if (nx < 0 || nx >= MAP_WIDTH || ny < 0 || ny >= MAP_HEIGHT)
+				continue;
+			int checkPos = (ny * MAP_WIDTH) + nx;
+			if (checkPos == pos || mapRoom[checkPos].isVisited == 1)
+				continue;
+			mapRoom[checkPos].prevPos = pos;
+			ft_lstadd_back(lst, ft_lstnew(&mapRoom[checkPos]));
+		}
+	}
+}
+
+int		myBfs(int *map, int pos)
+{
+	t_list	*tmp;
+	t_list	*to_check = NULL;
+	t_list	*tmp_toCheck = NULL;
+	t_room 	*mapRoom = GetNewMapRoom(pos);
+
+	addNeightborsToCheck(&to_check, pos, mapRoom);
+	while (ft_lstsize(to_check))
+	{
+		tmp = to_check;
+		while (tmp)
+		{
+			t_room *room = (t_room *)tmp->content;
+			room->isVisited = 1;
+			if (map[room->pos] != 0  && !isInContact(pos, room->pos))
+			{
+				ft_lstclear(&tmp_toCheck, (void *)NULL);
+				ft_lstclear(&to_check, (void *)NULL);
+				free(mapRoom);
+				return (getFirstPos(room->pos, pos, mapRoom));
+			}
+			if (map[room->pos] == 0)
+				addNeightborsToCheck(&tmp_toCheck, room->pos, mapRoom);
+			tmp = tmp->next;
+		}
+		ft_lstclear(&to_check, (void *)NULL);
+		to_check = tmp_toCheck;
+		tmp_toCheck = NULL;
+	}
+	ft_lstclear(&to_check, (void *)NULL);
+	free(mapRoom);
+	return (-1);
+}
 
 // void	move(t_lem_ipc *all)
 // {
-// 	int *mapSnap[MAP_SIZE];
+// 	int mapSnap[MAP_SIZE];
+// 	int newPos;
 
 // 	sem_wait(all->semaphore);
 // 	ft_memcpy(mapSnap, all->map, MAP_SIZE);
 // 	sem_post(all->semaphore);
-	
+// 	newPos = myBfs(mapSnap, all->pos);
+// 	sem_wait(all->semaphore);
+// 	if (newPos != -1 && all->map[newPos] == 0)
+// 	{
+// 		all->map[all->pos] = 0;
+// 		all->map[newPos] = all->teamId;
+// 		all->pos = newPos;
+// 	}
+// 	sem_post(all->semaphore);
 // }
 
 void	move(t_lem_ipc *all)
@@ -189,7 +290,6 @@ int is_last_team(t_lem_ipc *all)
 		}
 	}
 	sem_post(all->semaphore);
-	printMap(all->map, all->semaphore);
 	return (1);
 }
 
@@ -226,7 +326,6 @@ int	is_dead(t_lem_ipc *all)
 		}
 	}
 	sem_post(all->semaphore);
-	printMap(all->map, all->semaphore);
 	return (0);
 }
 
@@ -234,6 +333,7 @@ int main(int ac, char **av)
 {
 	t_lem_ipc	all;
 
+	int is_first = 0;
 	srand(time(NULL) ^ getpid());
 	if (ac != 2 || ft_atoi(av[1]) < 1)
 		all.teamId = 42;
@@ -244,7 +344,10 @@ int main(int ac, char **av)
 	all.semId = shmget(all.semKey, sizeof(sem_t), 0666);
 	all.mapId = shmget(all.mapKey, MAP_SIZE * sizeof(int), 0666);
 	if (all.semId == -1 || all.mapId == -1)
+	{
 		shm_init(&all);
+		is_first = 1;
+	}
 	else
 		getShm(&all);
 
@@ -256,9 +359,9 @@ int main(int ac, char **av)
 		my_sleep(100);
 	while (!is_dead(&all) && !is_last_team(&all))
 	{
-		my_sleep(100);
 		move(&all);
-		printMap(all.map, all.semaphore);
+		if (is_first)
+			printMap(all.map, all.semaphore);
 		my_sleep(100);
 	}
 	if (is_last(all.map, all.semaphore))
