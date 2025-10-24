@@ -12,9 +12,11 @@
 #include <errno.h>
 #include <semaphore.h>
 #include "../libft/libft.h"
+#include "../mlx/mlx.h"
 
-# define MAP_WIDTH 25
-# define MAP_HEIGHT 25
+# define NBR_TEAM 4
+# define MAP_WIDTH 100
+# define MAP_HEIGHT 100
 # define MAP_SIZE MAP_HEIGHT * MAP_WIDTH
 # define SHM_KEY_PATH_MAP "/tmp"
 # define SHM_KEY_PATH_SEM "/tmp"

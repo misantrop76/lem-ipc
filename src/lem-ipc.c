@@ -1,51 +1,5 @@
 #include "../includes/lem-ipc.h"
 
-void	printMap(int *map, sem_t *sem)
-{
-	int x = 0;
-	int y = 0;
-
-	sem_wait(sem);
-    printf("\033[2J\033[H");
-	while (x < MAP_HEIGHT)
-	{
-		while (y < MAP_WIDTH)
-		{
-			if (y != 0)
-				printf("%2d", map[x * MAP_WIDTH + y]);
-			else
-				printf("%2d", map[x * MAP_WIDTH + y]);
-			y++;
-		}
-		printf("\n");
-		y = 0;
-		x++;
-	}
-	fflush(stdout);
-	sem_post(sem);
-}
-
-int		is_last(int *map, sem_t *sem)
-{
-	int check = 0;
-
-	sem_wait(sem);
-	for (int a = 0; a < MAP_SIZE; a++)
-	{
-		if (map[a] != 0)
-		{
-			check++;
-			if (check > 1)
-			{
-				sem_post(sem);
-				return (0);
-			}
-		}
-	}
-	sem_post(sem);
-	return (1);
-}
-
 void	last_exit(t_lem_ipc *all)
 {
 	printf("Last exit call\n");
@@ -175,9 +129,15 @@ void	addNeightborsToCheck(t_list **lst, int pos, t_room *mapRoom)
 			if (checkPos == pos || mapRoom[checkPos].isVisited == 1)
 				continue;
 			mapRoom[checkPos].prevPos = pos;
+			mapRoom[checkPos].isVisited = 1;
 			ft_lstadd_back(lst, ft_lstnew(&mapRoom[checkPos]));
 		}
 	}
+}
+
+void	del(void *content)
+{
+	(void)content;
 }
 
 int		myBfs(int *map, int pos)
@@ -194,64 +154,65 @@ int		myBfs(int *map, int pos)
 		while (tmp)
 		{
 			t_room *room = (t_room *)tmp->content;
-			room->isVisited = 1;
 			if (map[room->pos] != 0  && !isInContact(pos, room->pos))
 			{
-				ft_lstclear(&tmp_toCheck, (void *)NULL);
-				ft_lstclear(&to_check, (void *)NULL);
+				ft_lstclear(&tmp_toCheck, del);
+				ft_lstclear(&to_check, del);
+				int newpos = getFirstPos(room->pos, pos, mapRoom);
 				free(mapRoom);
-				return (getFirstPos(room->pos, pos, mapRoom));
+				return (newpos);
 			}
 			if (map[room->pos] == 0)
 				addNeightborsToCheck(&tmp_toCheck, room->pos, mapRoom);
 			tmp = tmp->next;
 		}
-		ft_lstclear(&to_check, (void *)NULL);
+		ft_lstclear(&to_check, del);
 		to_check = tmp_toCheck;
 		tmp_toCheck = NULL;
 	}
-	ft_lstclear(&to_check, (void *)NULL);
+	ft_lstclear(&to_check, del);
 	free(mapRoom);
 	return (-1);
 }
 
-// void	move(t_lem_ipc *all)
-// {
-// 	int mapSnap[MAP_SIZE];
-// 	int newPos;
-
-// 	sem_wait(all->semaphore);
-// 	ft_memcpy(mapSnap, all->map, MAP_SIZE);
-// 	sem_post(all->semaphore);
-// 	newPos = myBfs(mapSnap, all->pos);
-// 	sem_wait(all->semaphore);
-// 	if (newPos != -1 && all->map[newPos] == 0)
-// 	{
-// 		all->map[all->pos] = 0;
-// 		all->map[newPos] = all->teamId;
-// 		all->pos = newPos;
-// 	}
-// 	sem_post(all->semaphore);
-// }
-
 void	move(t_lem_ipc *all)
 {
-	int dx = (all->pos % MAP_WIDTH) + ((rand() % 3) - 1);
-	int dy = (all->pos / MAP_WIDTH) + ((rand() % 3) - 1);
-	int newpos = (MAP_WIDTH * dy) + dx;
+	int mapSnap[MAP_SIZE + 1];
+	int newPos;
 
 	sem_wait(all->semaphore);
-	while (dx < 0 || dx >= MAP_WIDTH || dy < 0 || dy >= MAP_HEIGHT || all->map[newpos] != 0)
+	for (int a = 0; a < MAP_SIZE; a++)
+		mapSnap[a] = all->map[a];
+	sem_post(all->semaphore);
+	newPos = myBfs(mapSnap, all->pos);
+	sem_wait(all->semaphore);
+	if (newPos != -1 && all->map[newPos] == 0)
 	{
-		dx = (all->pos % MAP_WIDTH) + ((rand() % 3) - 1);
-		dy = (all->pos / MAP_WIDTH) + ((rand() % 3) - 1);
-		newpos = (MAP_WIDTH * dy) + dx;
+		all->map[all->pos] = 0;
+		all->map[newPos] = all->teamId;
+		all->pos = newPos;
 	}
-	all->map[all->pos] = 0;
-	all->pos = newpos;
-	all->map[newpos] = all->teamId;
 	sem_post(all->semaphore);
 }
+
+// void	move(t_lem_ipc *all)
+// {
+// 	int dx = (all->pos % MAP_WIDTH) + ((rand() % 3) - 1);
+// 	int dy = (all->pos / MAP_WIDTH) + ((rand() % 3) - 1);
+// 	int newpos = (MAP_WIDTH * dy) + dx;
+
+// 	sem_wait(all->semaphore);
+// 	while (dx < 0 || dx >= MAP_WIDTH || dy < 0 || dy >= MAP_HEIGHT || all->map[newpos] != 0)
+// 	{
+// 		dx = (all->pos % MAP_WIDTH) + ((rand() % 3) - 1);
+// 		dy = (all->pos / MAP_WIDTH) + ((rand() % 3) - 1);
+// 		newpos = (MAP_WIDTH * dy) + dx;
+// 	}
+// 	all->map[all->pos] = 0;
+// 	all->pos = newpos;
+// 	all->map[newpos] = all->teamId;
+// 	sem_post(all->semaphore);
+// }
 
 void	my_sleep(unsigned long ms)
 {
@@ -272,6 +233,53 @@ void	error_help()
 	ft_putstr_fd("Usage:\n", 1);
 	ft_putstr_fd("./lem-ipc team_ID\n", 1);
 	exit (1);
+}
+
+int		isInTeamId(int *teamId, int check)
+{
+	for (int a = 0; a < MAP_SIZE; a++)
+	{
+		if (teamId[a] == check)
+			return (1);
+	}
+	return (0);
+}
+
+int teamCount(int *map, sem_t *sem)
+{
+	int	teamId[MAP_SIZE] = {0};
+
+	sem_wait(sem);
+	for (int a = 0; a < MAP_SIZE; a++)
+		if (map[a] != 0 && !isInTeamId(teamId, map[a]))
+			teamId[a] = map[a];
+	sem_post(sem);
+	int count = 0;
+	for (int a = 0; a < MAP_SIZE; a++)
+		if (teamId[a] != 0)
+			count++;
+	return (count);
+}
+
+int		is_last(int *map, sem_t *sem)
+{
+	int check = 0;
+
+	sem_wait(sem);
+	for (int a = 0; a < MAP_SIZE; a++)
+	{
+		if (map[a] != 0)
+		{
+			check++;
+			if (check > 1)
+			{
+				sem_post(sem);
+				return (0);
+			}
+		}
+	}
+	sem_post(sem);
+	return (1);
 }
 
 int is_last_team(t_lem_ipc *all)
@@ -333,7 +341,6 @@ int main(int ac, char **av)
 {
 	t_lem_ipc	all;
 
-	int is_first = 0;
 	srand(time(NULL) ^ getpid());
 	if (ac != 2 || ft_atoi(av[1]) < 1)
 		all.teamId = 42;
@@ -344,10 +351,7 @@ int main(int ac, char **av)
 	all.semId = shmget(all.semKey, sizeof(sem_t), 0666);
 	all.mapId = shmget(all.mapKey, MAP_SIZE * sizeof(int), 0666);
 	if (all.semId == -1 || all.mapId == -1)
-	{
 		shm_init(&all);
-		is_first = 1;
-	}
 	else
 		getShm(&all);
 
@@ -355,13 +359,11 @@ int main(int ac, char **av)
 	sem_wait(all.semaphore);
 	all.map[all.pos] = all.teamId;
 	sem_post(all.semaphore);
-	while (is_last_team(&all))
+	while (teamCount(all.map, all.semaphore) < NBR_TEAM)
 		my_sleep(100);
 	while (!is_dead(&all) && !is_last_team(&all))
 	{
 		move(&all);
-		if (is_first)
-			printMap(all.map, all.semaphore);
 		my_sleep(100);
 	}
 	if (is_last(all.map, all.semaphore))

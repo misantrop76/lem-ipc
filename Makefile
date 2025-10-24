@@ -46,24 +46,31 @@ SRCS_L =	libft/ft_atoi.c\
 			libft/ft_free_tab.c\
 
 FUNC =	src/lem-ipc.c
-
+FUNC_VIZU = src/vizu.c
 CC = cc
 CFLAGS = -g -Wall -Wextra -Werror
 LIBFT = ./libft/libft.a
 
 # Normal
 NAME = lem-ipc
-
-OBJ = $(patsubst srcs/%.c, obj/%.o, $(FUNC))
-
+NAME_VISU = vizu
+OBJ = $(patsubst src/%.c, obj/%.o, $(FUNC))
+OBJ_VIZU = $(patsubst src/%.c, obj/%.o, $(FUNC_VIZU))
 HEADER = includes/lem-ipc.h
+
+MLX_PATH = ./mlx/
+MLX_FLAGS = -lX11 -lXext -lm
+MLX_LIB = mlx/libmlx_Linux.a
 # Compil
+
 all: 	${NAME}
 
 $(OBJ): ${HEADER}
 
-${NAME}: $(LIBFT) ${OBJ}
+${NAME}: $(LIBFT) ${OBJ} ${OBJ_VIZU}
+	make -C $(MLX_PATH) --no-print-directory
 	${CC} ${OBJ} $(LIBFT) $(CFLAGS) -o $(NAME)
+	${CC} ${OBJ_VIZU} $(LIBFT) $(MLX_LIB) -lX11 -lXext -lm $(CFLAGS) -o $(NAME_VISU)
 
 $(LIBFT): $(HEADER_LIB) $(SRCS_L)
 	echo "\n==> Making LIBFT"
@@ -76,9 +83,11 @@ obj/%.o: src/%.c
 clean:	
 	rm -rf obj
 	make -C ./libft clean
+	make -C ./mlx clean
 
 fclean:	clean
 	rm -f ${NAME}
+	rm -f ${NAME_VISU}
 	make -C ./libft fclean
 
 re:	fclean all
