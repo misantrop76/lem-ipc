@@ -14,6 +14,5 @@ for team_id in "${teams[@]}"; do
     done
 done
 ./vizu
-./lem-ipc 42 &
 echo "Tous les bots ont été lancés !"
 wait
