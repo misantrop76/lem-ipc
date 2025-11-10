@@ -25,6 +25,7 @@ int		getShm(t_lem_ipc *all)
 int	free_all(t_vizu *all)
 {
 	mlx_destroy_image(all->mlx_ptr, all->img.img_ptr);
+	mlx_clear_window(all->mlx_ptr, all->win_ptr);
 	mlx_destroy_window(all->mlx_ptr, all->win_ptr);
 	mlx_destroy_display(all->mlx_ptr);
 	exit (0);
@@ -48,7 +49,7 @@ void	updateImg(t_vizu *all)
 			int dx = (int)((float)x * ((float)MAP_WIDTH) / all->winSize);
 			int dy = (int)((float)y * ((float)MAP_WIDTH) / all->winSize);
 
-			my_mlx_pixel_put(&all->img, x, y, all->lemIpc.map[(dy * MAP_WIDTH) + dx] * 10000000);
+			my_mlx_pixel_put(&all->img, x, y, all->lemIpc.map[(dy * MAP_WIDTH) + dx] * (__INT_MAX__ / 1000000));
 		}
 	}
 	sem_post(all->lemIpc.semaphore);
@@ -72,7 +73,7 @@ int	vizu_loop(t_vizu *all)
 		}
 	}
 	if ((now_ms - all->start_ms) % 60 == 0)
-	{	
+	{
 		updateImg(all);
 		mlx_put_image_to_window(all->mlx_ptr, all->win_ptr, all->img.img_ptr, 0, 0);
 	}

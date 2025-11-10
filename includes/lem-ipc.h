@@ -14,8 +14,8 @@
 #include "../libft/libft.h"
 #include "../mlx/mlx.h"
 
-# define MAP_WIDTH 50
-# define MAP_HEIGHT 50
+# define MAP_WIDTH 100
+# define MAP_HEIGHT 100
 # define MAP_SIZE MAP_HEIGHT * MAP_WIDTH
 # define SHM_KEY_PATH_MAP "/tmp"
 # define SHM_KEY_PATH_SEM "/tmp"

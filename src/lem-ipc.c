@@ -23,6 +23,21 @@ int		getPos(int *map, sem_t *sem)
 	return (random);
 }
 
+int	moveRandom(int *map, int pos)
+{
+	int dx = (pos % MAP_WIDTH) + ((rand() % 3) - 1);
+	int dy = (pos / MAP_WIDTH) + ((rand() % 3) - 1);
+	int newpos = (MAP_WIDTH * dy) + dx;
+
+	while (dx < 0 || dx >= MAP_WIDTH || dy < 0 || dy >= MAP_HEIGHT || map[newpos] != 0)
+	{
+		dx = (pos % MAP_WIDTH) + ((rand() % 3) - 1);
+		dy = (pos / MAP_WIDTH) + ((rand() % 3) - 1);
+		newpos = (MAP_WIDTH * dy) + dx;
+	}
+	return (newpos);
+}
+
 int		getShm(t_lem_ipc *all)
 {
 	all->semId = shmget(all->semKey, sizeof(sem_t), 0666);
@@ -141,13 +156,49 @@ void	del(void *content)
 	(void)content;
 }
 
+int reverse(int opp, int pos)
+{
+	int x = pos % MAP_WIDTH;
+	int y = pos / MAP_WIDTH;
+	int ox = opp % MAP_WIDTH;
+	int oy = opp / MAP_WIDTH;
+
+	if (ox < x && x + 1 < MAP_WIDTH)
+		x += 1;
+	else if (ox > x && x - 1 >= 0)
+		x -= 1;
+	if (oy < y && y + 1 < MAP_HEIGHT)
+		y += 1;
+	else if (oy > y && y - 1 >= 0)
+		y -= 1;
+	return (x + (y * MAP_WIDTH));
+}
+
+int		isHunting(int *map, int pos, int teamId)
+{
+	int x = pos % MAP_WIDTH;
+	int y = pos / MAP_WIDTH;
+
+	for (int dx = x - 10; dx <= x + 10; dx++)
+	{
+		for (int dy = y - 10; dy <= y + 10; dy++)
+		{
+			if (dx < 0 || dy < 0 || dx > MAP_WIDTH || dy > MAP_HEIGHT || (dx == x && dy == y))
+				continue;
+			if (map[dx + (MAP_WIDTH * dy)] == teamId)
+				return (1);
+		}
+	}
+	return (0);
+}
+
 int		myBfs(int *map, int pos, int teamId)
 {
 	t_list	*tmp;
 	t_list	*to_check = NULL;
 	t_list	*tmp_toCheck = NULL;
 	t_room 	*mapRoom = GetNewMapRoom(pos);
-	int		hunting = 0;
+	int		hunting = isHunting(map, pos, teamId);
 
 	addNeightborsToCheck(&to_check, pos, mapRoom);
 	while (ft_lstsize(to_check))
@@ -158,18 +209,29 @@ int		myBfs(int *map, int pos, int teamId)
 			t_room *room = (t_room *)tmp->content;
 			if (map[room->pos] != 0)
 			{
-				if (map[room->pos] == teamId && isInContact(pos, room->pos, 5))
-					hunting = 1;
-				else if ((map[room->pos] == teamId && hunting == 0) || hunting == 1)
+				int newPos = getFirstPos(room->pos, pos, mapRoom);
+				if (hunting == 0 && teamId != map[room->pos] && isInContact(pos, room->pos, 4))
 				{
-					ft_lstclear(&tmp_toCheck, del);
+					newPos = reverse(newPos, pos);
 					ft_lstclear(&to_check, del);
-					int newpos = getFirstPos(room->pos, pos, mapRoom);
+					ft_lstclear(&tmp_toCheck, del);
 					free(mapRoom);
-					return (newpos);
+					while (newPos == pos || map[newPos] != 0)
+						newPos = moveRandom(map, pos);
+					return (newPos);
+				}
+				if ((hunting == 0 && teamId == map[room->pos]) || (teamId != map[room->pos] && hunting == 1))
+				{
+					newPos = getFirstPos(room->pos, pos, mapRoom);
+					ft_lstclear(&to_check, del);
+					ft_lstclear(&tmp_toCheck, del);
+					free(mapRoom);
+					while (newPos == pos || map[newPos] != 0)
+						newPos = moveRandom(map, pos);
+					return (newPos);
 				}
 			}
-			if (map[room->pos] == 0)
+			else
 				addNeightborsToCheck(&tmp_toCheck, room->pos, mapRoom);
 			tmp = tmp->next;
 		}
@@ -179,7 +241,7 @@ int		myBfs(int *map, int pos, int teamId)
 	}
 	ft_lstclear(&to_check, del);
 	free(mapRoom);
-	return (-1);
+	return (moveRandom(map, pos));
 }
 
 void	move(t_lem_ipc *all)
@@ -201,26 +263,6 @@ void	move(t_lem_ipc *all)
 	}
 	sem_post(all->semaphore);
 }
-
-// void	move(t_lem_ipc *all)
-// {
-// 	int dx = (all->pos % MAP_WIDTH) + ((rand() % 3) - 1);
-// 	int dy = (all->pos / MAP_WIDTH) + ((rand() % 3) - 1);
-// 	int newpos = (MAP_WIDTH * dy) + dx;
-
-// 	sem_wait(all->semaphore);
-// 	while (dx < 0 || dx >= MAP_WIDTH || dy < 0 || dy >= MAP_HEIGHT || all->map[newpos] != 0)
-// 	{
-// 		dx = (all->pos % MAP_WIDTH) + ((rand() % 3) - 1);
-// 		dy = (all->pos / MAP_WIDTH) + ((rand() % 3) - 1);
-// 		newpos = (MAP_WIDTH * dy) + dx;
-// 	}
-// 	all->map[all->pos] = 0;
-// 	all->pos = newpos;
-// 	all->map[newpos] = all->teamId;
-// 	sem_post(all->semaphore);
-// }
-
 
 void	error_help()
 {
@@ -325,6 +367,26 @@ int	is_dead(t_lem_ipc *all)
 	return (0);
 }
 
+void	game(t_lem_ipc *all)
+{
+	all->pos = getPos(all->map, all->semaphore);
+	sem_wait(all->semaphore);
+	all->map[all->pos] = all->teamId;
+	sem_post(all->semaphore);
+	while (!checkGameStatus(all->map, all->semaphore))
+		usleep(100000);
+	while (!is_dead(all) && !is_last_team(all))
+	{
+		move(all);
+		usleep(20000);
+	}
+	if (is_last(all->map, all->semaphore))
+		last_exit(all);
+	sem_wait(all->semaphore);
+	all->map[all->pos] = 0;
+	sem_post(all->semaphore);
+}
+
 int main(int ac, char **av)
 {
 	t_lem_ipc	all;
@@ -342,22 +404,6 @@ int main(int ac, char **av)
 		shm_init(&all);
 	else
 		getShm(&all);
-
-	all.pos = getPos(all.map, all.semaphore);
-	sem_wait(all.semaphore);
-	all.map[all.pos] = all.teamId;
-	sem_post(all.semaphore);
-	while (!checkGameStatus(all.map, all.semaphore))
-		usleep(200000);
-	while (!is_dead(&all) && !is_last_team(&all))
-	{
-		move(&all);
-		usleep(200000);
-	}
-	if (is_last(all.map, all.semaphore))
-		last_exit(&all);
-	sem_wait(all.semaphore);
-	all.map[all.pos] = 0;
-	sem_post(all.semaphore);
+	game(&all);
 	return (0);
 }
