@@ -20,6 +20,8 @@ typedef struct s_vizu
     void    *mlx_ptr;
     void   *win_ptr;
 	int		winSize;
+	int		gameStatus;
+	unsigned long start_ms;
 	t_img	img;
 	t_lem_ipc lemIpc;
 }				t_vizu;
