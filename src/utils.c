@@ -1,24 +1,18 @@
 #include "../includes/lem-ipc.h"
 #include "../includes/vizu.h"
 
-int		is_last(int *map, sem_t *sem)
+int		is_last(int *map)
 {
 	int check = 0;
-
-	sem_wait(sem);
 	for (int a = 0; a < MAP_SIZE; a++)
 	{
 		if (map[a] != 0)
 		{
-			check++;
-			if (check > 1)
-			{
-				sem_post(sem);
+			if (check >= 1)
 				return (0);
-			}
+			check++;
 		}
 	}
-	sem_post(sem);
 	return (1);
 }
 

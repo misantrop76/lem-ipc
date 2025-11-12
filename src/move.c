@@ -207,15 +207,34 @@ int		myBfs(int *map, int pos, int teamId, int random)
 	return (moveRandom(map, pos));
 }
 
+int		isMovePossible(int *map, int pos)
+{
+	int x = pos % MAP_WIDTH;
+	int y = pos / MAP_WIDTH;
+
+	for (int dx = x - 1; dx <= x + 1; dx++)
+	{
+		for (int dy = y - 1; dy <= y + 1; dy++)
+		{
+			if (dx > 0 && dy > 0 && dx < MAP_WIDTH && dy < MAP_HEIGHT 
+				&& map[dx + (MAP_WIDTH * dy)] == 0)
+				return (1);
+		}
+	}
+	return (0);
+}
+
 void	move(t_lem_ipc *all)
 {
-	int mapSnap[MAP_SIZE + 1];
+	int mapSnap[MAP_SIZE];
 	int newPos;
 
 	sem_wait(all->semaphore);
 	for (int a = 0; a < MAP_SIZE; a++)
 		mapSnap[a] = all->map[a];
 	sem_post(all->semaphore);
+	if (!isMovePossible(mapSnap, all->pos))
+		return;
 	newPos = myBfs(mapSnap, all->pos, all->teamId, rand() % 2);
 	sem_wait(all->semaphore);
 	if (newPos != -1 && all->map[newPos] == 0)

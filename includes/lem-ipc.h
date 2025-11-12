@@ -15,8 +15,8 @@
 #include "../mlx/mlx.h"
 #include "math.h"
 
-# define MAP_WIDTH 50
-# define MAP_HEIGHT 50
+# define MAP_WIDTH 100
+# define MAP_HEIGHT 100
 # define MAP_SIZE MAP_HEIGHT * MAP_WIDTH
 # define SHM_KEY_PATH_MAP "/tmp"
 # define SHM_KEY_PATH_SEM "/tmp"
@@ -43,6 +43,6 @@ typedef struct	t_lem_ipc
 }				t_lem_ipc;
 
 void	move(t_lem_ipc *all);
-int		is_last(int *map, sem_t *sem);
+int		is_last(int *map);
 
 #endif

@@ -140,6 +140,8 @@ int	vizu_loop(t_vizu *all)
 		{
 			all->winnerColor = GetGameState(all);
 			winnerImage(all);
+			shmdt(all->lemIpc.map);
+			shmdt(all->lemIpc.semaphore);
 		}
 		mlx_put_image_to_window(all->mlx_ptr, all->win_ptr, all->img.img_ptr, 0, 0);
 	}
@@ -151,6 +153,7 @@ int main()
 	t_vizu vizu;
 	struct timeval time;
 
+	usleep(100000);
 	vizu.lemIpc.mapKey = ftok(SHM_KEY_PATH_MAP, SHM_KEY_ID);
 	vizu.lemIpc.semKey = ftok(SHM_KEY_PATH_SEM, SHM_KEY_ID + 1);
 	getShm(&vizu.lemIpc);
