@@ -1,11 +1,42 @@
 #include "../includes/vizu.h"
 
-void	my_mlx_pixel_put(t_img *data, int x, int y, int color)
+int	free_all(t_vizu *all)
+{
+	mlx_destroy_image(all->mlx_ptr, all->img.img_ptr);
+	mlx_clear_window(all->mlx_ptr, all->win_ptr);
+	mlx_destroy_window(all->mlx_ptr, all->win_ptr);
+	mlx_destroy_display(all->mlx_ptr);
+	free(all->mlx_ptr);
+	exit (0);
+	return (0);
+}
+
+int	my_mlx_get_color(t_img *data, int x, int y)
 {
 	char	*dst;
 
 	dst = data->data + (y * data->size_l + x * (data->bpp / 8));
-	*(unsigned int *)dst = color;
+	return (*(unsigned int *)dst);
+}
+
+int		GetGameState(t_vizu *all)
+{
+	int lastTeam = 0;
+
+	for (int x = 0; x < all->winSize; x++)
+	{
+		for (int y = 0; y < all->winSize; y++)
+		{
+			int color = my_mlx_get_color(&all->img, x, y);
+			if (color)
+			{
+				if (lastTeam && lastTeam != color)
+					return (0);
+				lastTeam = color;
+			}
+		}
+	}
+	return (lastTeam);
 }
 
 int		getShm(t_lem_ipc *all)
@@ -22,15 +53,6 @@ int		getShm(t_lem_ipc *all)
 	return (0);
 }
 
-int	free_all(t_vizu *all)
-{
-	mlx_destroy_image(all->mlx_ptr, all->img.img_ptr);
-	mlx_clear_window(all->mlx_ptr, all->win_ptr);
-	mlx_destroy_window(all->mlx_ptr, all->win_ptr);
-	mlx_destroy_display(all->mlx_ptr);
-	exit (0);
-	return (0);
-}
 int	key_press(int key, t_vizu *all)
 {
 	if (key == 65307)
@@ -55,6 +77,45 @@ void	updateImg(t_vizu *all)
 	sem_post(all->lemIpc.semaphore);
 }
 
+void	winnerImage(t_vizu *all)
+{
+	int center = all->winSize / 2;
+	float maxDist = sqrtf(2) * center;
+	srand(time(NULL));
+
+	for (int x = 0; x < all->winSize; x++)
+	{
+		for (int y = 0; y < all->winSize; y++)
+		{
+			int dx = x - center;
+			int dy = y - center;
+			float dist = sqrtf(dx * dx + dy * dy);
+
+			float fade = 1.0f - (dist / maxDist);
+			if (fade < 0) fade = 0;
+			if (fade > 1) fade = 1;
+
+			unsigned int base = all->winnerColor;
+			unsigned char r = ((base >> 16) & 0xFF) * fade;
+			unsigned char g = ((base >> 8) & 0xFF) * fade;
+			unsigned char b = (base & 0xFF) * fade;
+
+			if (rand() % 200 == 0)
+			{
+				r = (r + rand() % 100) % 256;
+				g = (g + rand() % 100) % 256;
+				b = (b + rand() % 100) % 256;
+			}
+
+			int finalColor = (r << 16) | (g << 8) | b;
+			my_mlx_pixel_put(&all->img, x, y, finalColor);
+		}
+	}
+
+	int scale = all->winSize / 70;
+	draw_big_text(all, all->winSize / 8, all->winSize / 2.5 , "GAME OVER", all->winnerColor, scale);
+}
+
 int	vizu_loop(t_vizu *all)
 {
 
@@ -63,7 +124,7 @@ int	vizu_loop(t_vizu *all)
 	gettimeofday(&time, NULL);
 	unsigned long now_ms = (time.tv_sec * 1000) + (time.tv_usec / 1000);
 	if (all->gameStatus == 0)
-	{	
+	{
 		if (now_ms - all->start_ms > 2000)
 		{
 			all->gameStatus = 1;
@@ -72,9 +133,14 @@ int	vizu_loop(t_vizu *all)
 			sem_post(all->lemIpc.semaphore);
 		}
 	}
-	if ((now_ms - all->start_ms) % 60 == 0)
+	if (!all->winnerColor && (now_ms - all->start_ms) % 60 == 0)
 	{
 		updateImg(all);
+		if (GetGameState(all))
+		{
+			all->winnerColor = GetGameState(all);
+			winnerImage(all);
+		}
 		mlx_put_image_to_window(all->mlx_ptr, all->win_ptr, all->img.img_ptr, 0, 0);
 	}
 	return (0);
@@ -89,6 +155,7 @@ int main()
 	vizu.lemIpc.semKey = ftok(SHM_KEY_PATH_SEM, SHM_KEY_ID + 1);
 	getShm(&vizu.lemIpc);
 	vizu.gameStatus = 0;
+	vizu.winnerColor = 0;
 	gettimeofday(&time, NULL);
 	vizu.start_ms = (time.tv_sec * 1000) + (time.tv_usec / 1000);
 	int x;

@@ -45,8 +45,12 @@ SRCS_L =	libft/ft_atoi.c\
 			libft/ft_tab_size.c\
 			libft/ft_free_tab.c\
 
-FUNC =	src/lem-ipc.c
-FUNC_VIZU = src/vizu.c
+FUNC =	src/lem-ipc.c\
+		src/utils.c\
+		src/move.c
+
+FUNC_VIZU = src/vizu.c\
+			src/utils.c
 CC = cc
 CFLAGS = -g -Wall -Wextra -Werror
 LIBFT = ./libft/libft.a
