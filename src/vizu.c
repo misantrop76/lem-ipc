@@ -148,6 +148,22 @@ int	vizu_loop(t_vizu *all)
 	return (0);
 }
 
+int	mouse_click(int button, int x, int y, t_vizu *all)
+{	
+	(void)x;
+	(void)y;
+	if (!all->winnerColor && button == 1)
+	{
+		sem_wait(all->lemIpc.semaphore);
+		if (all->lemIpc.map[MAP_SIZE])
+			all->lemIpc.map[MAP_SIZE] = 0;
+		else
+			all->lemIpc.map[MAP_SIZE] = 1;
+		sem_post(all->lemIpc.semaphore);
+	}
+	return (0);
+}
+
 int main()
 {
 	t_vizu vizu;
@@ -171,6 +187,7 @@ int main()
 	vizu.img.data = mlx_get_data_addr(vizu.img.img_ptr, &vizu.img.bpp, &vizu.img.size_l, &vizu.img.endian);
 	mlx_hook(vizu.win_ptr, 17, 0, free_all, &vizu);
 	mlx_hook(vizu.win_ptr, 2, (1L << 0), key_press, &vizu);
+	mlx_hook(vizu.win_ptr, 4, (1L << 2), mouse_click, &vizu);
 	mlx_loop_hook(vizu.mlx_ptr, vizu_loop, &vizu);
 	mlx_loop(vizu.mlx_ptr);
 }

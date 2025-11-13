@@ -6,6 +6,7 @@
 # include <sys/time.h>
 #include <unistd.h>
 
+
 ///////// IMAGE MLX ///////
 typedef struct s_img
 {

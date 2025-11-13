@@ -181,7 +181,8 @@ void	game(t_lem_ipc *all)
 		usleep(100000);
 	while (!is_dead(all) && !is_last_team(all))
 	{
-		move(all);
+		if (checkGameStatus(all->map, all->semaphore))
+			move(all);
 		usleep(5500000 / MAP_WIDTH);
 	}
 }

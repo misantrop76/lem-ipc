@@ -3,13 +3,11 @@
 
 #include <sys/ipc.h>
 #include <sys/shm.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <time.h>
 #include <sys/time.h>
-#include <errno.h>
 #include <semaphore.h>
 #include "../libft/libft.h"
 #include "../mlx/mlx.h"
