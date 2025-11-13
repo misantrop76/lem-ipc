@@ -53,7 +53,6 @@ int		getShm(t_lem_ipc *all)
 
 int		shm_init(t_lem_ipc *all)
 {
-	printf("init call\n");
 	shmctl(all->mapId, IPC_RMID, NULL);
 	shmctl(all->semId, IPC_RMID, NULL);
 	all->semId = shmget(all->semKey, sizeof(sem_t), 0666 | IPC_CREAT | IPC_EXCL);
@@ -175,7 +174,7 @@ void	game(t_lem_ipc *all)
 	all->pos = getPos(all->map, all->semaphore, all->teamId);
 	if (all->pos == -1)
 	{
-		printf("Error: trop de bots sur la map\n");
+		ft_putstr_fd("Error: trop de bots sur la map\n", 1);
 		return;
 	}
 	while (!checkGameStatus(all->map, all->semaphore))
@@ -183,7 +182,7 @@ void	game(t_lem_ipc *all)
 	while (!is_dead(all) && !is_last_team(all))
 	{
 		move(all);
-		usleep(100000 - (MAP_SIZE * 4));
+		usleep(5500000 / MAP_WIDTH);
 	}
 }
 
@@ -193,7 +192,7 @@ int main(int ac, char **av)
 
 	srand(time(NULL) ^ getpid());
 	if (ac != 2 || ft_atoi(av[1]) < 1 || ft_atoi(av[1]) > 10000 || MAP_HEIGHT < 5 ||
-	MAP_HEIGHT > 150 || MAP_HEIGHT != MAP_WIDTH)
+	MAP_HEIGHT > 100 || MAP_HEIGHT != MAP_WIDTH)
 		error_help();
 	else
 		all.teamId = ft_atoi(av[1]);

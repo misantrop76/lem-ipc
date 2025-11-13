@@ -61,6 +61,7 @@ NAME_VISU = vizu
 OBJ = $(patsubst src/%.c, obj/%.o, $(FUNC))
 OBJ_VIZU = $(patsubst src/%.c, obj/%.o, $(FUNC_VIZU))
 HEADER = includes/lem-ipc.h
+HEADER_VISU = includes/vizu.h
 
 MLX_PATH = ./mlx/
 MLX_FLAGS = -lX11 -lXext -lm
@@ -70,11 +71,12 @@ MLX_LIB = mlx/libmlx_Linux.a
 all: 	${NAME}
 
 $(OBJ): ${HEADER}
+$(OBJ_VIZU): ${HEADER} ${HEADER_VISU}
 
-${NAME}: $(LIBFT) ${OBJ} ${OBJ_VIZU}
+${NAME}: $(LIBFT) ${OBJ} ${OBJ_VIZU} ${HEADER} ${HEADER_VISU}
 	make -C $(MLX_PATH) --no-print-directory
-	${CC} ${OBJ} $(LIBFT) $(CFLAGS) -o $(NAME)
-	${CC} ${OBJ_VIZU} $(LIBFT) $(MLX_LIB) -lX11 -lXext -lm $(CFLAGS) -o $(NAME_VISU)
+	${CC} ${OBJ} $(LIBFT) $(CFLAGS) -DMAP_WIDTH=10 -o $(NAME)
+	${CC} ${OBJ_VIZU} $(LIBFT) $(MLX_LIB) -DMAP_WIDTH=10 -lX11 -lXext -lm $(CFLAGS) -o $(NAME_VISU)
 
 $(LIBFT): $(HEADER_LIB) $(SRCS_L)
 	echo "\n==> Making LIBFT"
