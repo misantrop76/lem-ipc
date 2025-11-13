@@ -123,7 +123,7 @@ int	vizu_loop(t_vizu *all)
 
 	gettimeofday(&time, NULL);
 	unsigned long now_ms = (time.tv_sec * 1000) + (time.tv_usec / 1000);
-	if (all->gameStatus == 0)
+	if (!all->winnerColor && all->gameStatus == 0)
 	{
 		if (now_ms - all->start_ms > 2000)
 		{

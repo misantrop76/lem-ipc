@@ -11,7 +11,6 @@ for ((i=1; i<=bots_per_team; i++)); do
         ./lem-ipc "$team_id" &
     done
 done
-
 echo "Tous les bots sont lancé !"
 ./vizu
 wait

@@ -1,20 +1,16 @@
 #!/bin/bash
-#7784 945 274 6699 2
-ipcs -m > before.txt
-teams=(7784 945 274 6699 2)
+teams=(7784 945 274 6699 2 6000)
 
-bots_per_team=1999
+bots_per_team=200
 
 echo "Lancement de $(( ${#teams[@]} * bots_per_team )) bots..."
 make
 for ((i=1; i<=bots_per_team; i++)); do
     for team_id in "${teams[@]}"; do
-        ./lem-ipc "$team_id" &
+        ./lem-ipc "$team_id" 1 &
     done
 done
-valgrind ./lem-in 2
 echo "Tous les bots sont lancé !"
-valgrind ./vizu
+./vizu
 wait
-ipcs -m > after.txt
-diff before.txt after.txt
+

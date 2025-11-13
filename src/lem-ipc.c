@@ -1,4 +1,7 @@
 #include "../includes/lem-ipc.h"
+#include "../includes/global.h"
+
+extern t_lem_ipc *g_all;
 
 void	last_exit(t_lem_ipc *all)
 {
@@ -169,7 +172,7 @@ int	is_dead(t_lem_ipc *all)
 	return (0);
 }
 
-void	game(t_lem_ipc *all)
+void	game(t_lem_ipc *all, int move_pattern)
 {
 	all->pos = getPos(all->map, all->semaphore, all->teamId);
 	if (all->pos == -1)
@@ -182,21 +185,41 @@ void	game(t_lem_ipc *all)
 	while (!is_dead(all) && !is_last_team(all))
 	{
 		if (checkGameStatus(all->map, all->semaphore))
-			move(all);
+			move(all, move_pattern);
 		usleep(5500000 / MAP_WIDTH);
 	}
+}
+
+void signal_handler(int sig)
+{
+    (void)sig;
+    ft_putstr_fd("signal recu !\n", 1);
+	sem_wait(g_all->semaphore);
+	if (is_last(g_all->map))
+	{
+		sem_post(g_all->semaphore);
+		last_exit(g_all);
+	}
+	else
+		g_all->map[g_all->pos] = 0;
+	sem_post(g_all->semaphore);
+	exit(1);
 }
 
 int main(int ac, char **av)
 {
 	t_lem_ipc	all;
+	int			move_pattern = 0;
 
 	srand(time(NULL) ^ getpid());
-	if (ac != 2 || ft_atoi(av[1]) < 1 || ft_atoi(av[1]) > 10000 || MAP_HEIGHT < 5 ||
+	g_all = &all;
+	if (ac < 2 || ft_atoi(av[1]) < 1 || ft_atoi(av[1]) > 10000 || MAP_HEIGHT < 5 ||
 	MAP_HEIGHT > 100 || MAP_HEIGHT != MAP_WIDTH)
 		error_help();
 	else
 		all.teamId = ft_atoi(av[1]);
+	if (ac > 2)
+		move_pattern = 1;
 	all.mapKey = ftok(SHM_KEY_PATH_MAP, SHM_KEY_ID);
 	all.semKey = ftok(SHM_KEY_PATH_SEM, SHM_KEY_ID + 1);
 	all.semId = shmget(all.semKey, sizeof(sem_t), 0666);
@@ -205,7 +228,12 @@ int main(int ac, char **av)
 		shm_init(&all);
 	else
 		getShm(&all);
-	game(&all);
+    signal(SIGINT, signal_handler);
+    signal(SIGTERM, signal_handler);
+    signal(SIGQUIT, signal_handler);
+	signal(SIGSEGV, signal_handler);
+	signal(SIGABRT, signal_handler);
+	game(&all, move_pattern);
 	shmdt(all.map);
 	shmdt(all.semaphore);
 	return (0);

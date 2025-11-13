@@ -12,6 +12,7 @@
 #include "../libft/libft.h"
 #include "../mlx/mlx.h"
 #include "math.h"
+#include <signal.h>
 
 
 # define MAP_WIDTH 100
@@ -41,7 +42,7 @@ typedef struct	t_lem_ipc
 	int			teamId;
 }				t_lem_ipc;
 
-void	move(t_lem_ipc *all);
+void	move(t_lem_ipc *all, int move_pattern);
 int		is_last(int *map);
 
 #endif

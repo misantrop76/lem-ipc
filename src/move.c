@@ -224,7 +224,7 @@ int		isMovePossible(int *map, int pos)
 	return (0);
 }
 
-void	move(t_lem_ipc *all)
+void	move(t_lem_ipc *all, int move_pattern)
 {
 	int mapSnap[MAP_SIZE];
 	int newPos;
@@ -235,7 +235,7 @@ void	move(t_lem_ipc *all)
 	sem_post(all->semaphore);
 	if (!isMovePossible(mapSnap, all->pos))
 		return;
-	newPos = myBfs(mapSnap, all->pos, all->teamId, rand() % 2);
+	newPos = myBfs(mapSnap, all->pos, all->teamId, move_pattern ? rand() % 2: 0);
 	sem_wait(all->semaphore);
 	if (newPos != -1 && all->map[newPos] == 0)
 	{
