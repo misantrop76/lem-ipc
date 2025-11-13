@@ -11,6 +11,7 @@ void	last_exit(t_lem_ipc *all)
 	shmdt(all->semaphore);
 	shmctl(all->mapId, IPC_RMID, NULL);
 	shmctl(all->semId, IPC_RMID, NULL);
+	msgctl(all->msgId, IPC_RMID, NULL);
 	exit(0);
 }
 
@@ -42,9 +43,6 @@ int	getPos(int *map, sem_t *sem, int teamId)
 
 int		getShm(t_lem_ipc *all)
 {
-	usleep(100000);
-	all->semId = shmget(all->semKey, sizeof(sem_t), 0666);
-	all->mapId = shmget(all->mapKey, (MAP_SIZE + 1) * sizeof(int), 0666);
 	if (all->mapId == -1 || all->semId == -1)
 		exit (1);
 	all->semaphore = (sem_t *) shmat(all->semId, NULL, 0);
@@ -58,9 +56,11 @@ int		shm_init(t_lem_ipc *all)
 {
 	shmctl(all->mapId, IPC_RMID, NULL);
 	shmctl(all->semId, IPC_RMID, NULL);
+	msgctl(all->msgId, IPC_RMID, NULL);
 	all->semId = shmget(all->semKey, sizeof(sem_t), 0666 | IPC_CREAT | IPC_EXCL);
 	all->mapId = shmget(all->mapKey, (MAP_SIZE + 1) * sizeof(int), 0666 | IPC_CREAT | IPC_EXCL);
-	if (all->semId == -1 || all->mapId == -1)
+	all->msgId = msgget(all->msgKey, 0666 | IPC_CREAT);
+	if (all->semId == -1 || all->mapId == -1 || all->msgId == -1)
 		exit(1);
 	all->semaphore = (sem_t *)shmat(all->semId, NULL, 0);
 	all->map = (int *)shmat(all->mapId, NULL, 0);
@@ -119,6 +119,19 @@ int is_last_team(t_lem_ipc *all)
 	}
 	sem_post(all->semaphore);
 	return (val);
+}
+
+int checkGameStatus2(t_lem_ipc *all)
+{
+	t_msg	message;
+
+	message.ctype = 1;
+	message.command = 1;
+	if (msgrcv(all->msgId, &message, sizeof(message.command), 0, 0) == -1)
+		exit (1);
+	if (msgsnd(all->msgId, &message, sizeof(message.command), 0) == -1)
+		exit (1);
+	return (message.command);
 }
 
 int checkGameStatus(int *map, sem_t *sem)
@@ -180,7 +193,7 @@ void	game(t_lem_ipc *all, int move_pattern)
 		ft_putstr_fd("Error: trop de bots sur la map\n", 1);
 		return;
 	}
-	while (!checkGameStatus(all->map, all->semaphore))
+	while (!checkGameStatus2(all))
 		usleep(100000);
 	while (!is_dead(all) && !is_last_team(all))
 	{
@@ -220,11 +233,13 @@ int main(int ac, char **av)
 		all.teamId = ft_atoi(av[1]);
 	if (ac > 2)
 		move_pattern = 1;
-	all.mapKey = ftok(SHM_KEY_PATH_MAP, SHM_KEY_ID);
-	all.semKey = ftok(SHM_KEY_PATH_SEM, SHM_KEY_ID + 1);
+	all.mapKey = ftok(SHM_KEY_PATH, SHM_KEY_ID);
+	all.semKey = ftok(SHM_KEY_PATH, SHM_KEY_ID + 1);
+	all.msgKey = ftok(SHM_KEY_PATH, SHM_KEY_ID + 2);
+	all.msgId = msgget(all.msgKey, 0666);
 	all.semId = shmget(all.semKey, sizeof(sem_t), 0666);
 	all.mapId = shmget(all.mapKey, (MAP_SIZE + 1) * sizeof(int), 0666);
-	if (all.semId == -1 || all.mapId == -1)
+	if (all.semId == -1 || all.mapId == -1 || all.msgId == -1)
 		shm_init(&all);
 	else
 		getShm(&all);
@@ -233,6 +248,7 @@ int main(int ac, char **av)
     signal(SIGQUIT, signal_handler);
 	signal(SIGSEGV, signal_handler);
 	signal(SIGABRT, signal_handler);
+	usleep(10000); 
 	game(&all, move_pattern);
 	shmdt(all.map);
 	shmdt(all.semaphore);

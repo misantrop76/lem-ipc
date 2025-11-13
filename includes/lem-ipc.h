@@ -3,6 +3,7 @@
 
 #include <sys/ipc.h>
 #include <sys/shm.h>
+#include <sys/msg.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -18,8 +19,7 @@
 # define MAP_WIDTH 100
 # define MAP_HEIGHT MAP_WIDTH
 # define MAP_SIZE MAP_HEIGHT * MAP_WIDTH
-# define SHM_KEY_PATH_MAP "/tmp"
-# define SHM_KEY_PATH_SEM "/tmp"
+# define SHM_KEY_PATH "/tmp"
 # define SHM_KEY_ID 65
 
 typedef struct s_room
@@ -28,6 +28,12 @@ typedef struct s_room
 	int		prevPos;
 	int		isVisited;
 }				t_room;
+
+typedef struct s_msg {
+	long ctype;
+    int command;      // 0 = pause, 1 = resume, 2 = shutdown
+} t_msg;
+
 
 typedef struct	t_lem_ipc
 {
@@ -38,6 +44,8 @@ typedef struct	t_lem_ipc
 	int			*map;
 	int			mapId;
 	key_t		mapKey;
+	int			msgId;
+	key_t		msgKey;
 	int			pos;
 	int			teamId;
 }				t_lem_ipc;

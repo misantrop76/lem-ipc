@@ -43,9 +43,9 @@ int		getShm(t_lem_ipc *all)
 {
 	all->semId = shmget(all->semKey, sizeof(sem_t), 0666);
 	all->mapId = shmget(all->mapKey, (MAP_SIZE + 1) * sizeof(int), 0666);
-	if (all->mapId == -1 || all->semId == -1)
+	all->msgId = msgget(all->msgKey, 0666);
+	if (all->mapId == -1 || all->semId == -1 || all->msgId == -1)
 		exit (1);
-
 	all->semaphore = (sem_t *) shmat(all->semId, NULL, 0);
 	all->map = (int *)shmat(all->mapId, NULL, 0);
 	if (all->semaphore == (sem_t *)(-1) || all->map == (int *)(-1))
@@ -127,7 +127,7 @@ int	vizu_loop(t_vizu *all)
 	{
 		if (now_ms - all->start_ms > 2000)
 		{
-			all->gameStatus = 1;
+			//msgctl(all->lemIpc.msgId, IPC_RMID, NULL);
 			sem_wait(all->lemIpc.semaphore);
 			all->lemIpc.map[MAP_SIZE] = 1;
 			sem_post(all->lemIpc.semaphore);
@@ -154,12 +154,18 @@ int	mouse_click(int button, int x, int y, t_vizu *all)
 	(void)y;
 	if (!all->winnerColor && button == 1)
 	{
-		sem_wait(all->lemIpc.semaphore);
-		if (all->lemIpc.map[MAP_SIZE])
-			all->lemIpc.map[MAP_SIZE] = 0;
-		else
-			all->lemIpc.map[MAP_SIZE] = 1;
-		sem_post(all->lemIpc.semaphore);
+		t_msg message;
+		message.command = 1;
+		message.ctype = 1;
+		all->gameStatus = 1;
+		if (msgsnd(all->lemIpc.msgId, &message, sizeof(message.command), 0) == -1)
+			exit (1);
+		// sem_wait(all->lemIpc.semaphore);
+		// if (all->lemIpc.map[MAP_SIZE])
+		// 	all->lemIpc.map[MAP_SIZE] = 0;
+		// else
+		// 	all->lemIpc.map[MAP_SIZE] = 1;
+		// sem_post(all->lemIpc.semaphore);
 	}
 	return (0);
 }
@@ -169,10 +175,17 @@ int main()
 	t_vizu vizu;
 	struct timeval time;
 
-	usleep(100000);
-	vizu.lemIpc.mapKey = ftok(SHM_KEY_PATH_MAP, SHM_KEY_ID);
-	vizu.lemIpc.semKey = ftok(SHM_KEY_PATH_SEM, SHM_KEY_ID + 1);
+	vizu.lemIpc.mapKey = ftok(SHM_KEY_PATH, SHM_KEY_ID);
+	vizu.lemIpc.semKey = ftok(SHM_KEY_PATH, SHM_KEY_ID + 1);
+	vizu.lemIpc.msgKey = ftok(SHM_KEY_PATH, SHM_KEY_ID + 2);
 	getShm(&vizu.lemIpc);
+	t_msg message;
+	message.command = 0;
+	message.ctype = 1;
+	if (msgsnd(vizu.lemIpc.msgId, &message, sizeof(message.command), 0) == -1)
+	{
+		exit (1);
+	}
 	vizu.gameStatus = 0;
 	vizu.winnerColor = 0;
 	gettimeofday(&time, NULL);
