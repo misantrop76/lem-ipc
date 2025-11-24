@@ -2,6 +2,9 @@
 #define GLOBAL_H
 
 #include "lem-ipc.h"
-t_lem_ipc *g_all = NULL;
+#include "vizu.h"
+
+int			g_is_signal = 0;
+int			g_is_signal_vizu = 0;
 
 #endif

@@ -1,19 +1,31 @@
 #include "../includes/lem-ipc.h"
 #include "../includes/vizu.h"
 
-int		is_last(int *map)
+int		is_last(int *map, sem_t *sem)
 {
 	int check = 0;
+	sem_wait(sem);
 	for (int a = 0; a < MAP_SIZE; a++)
 	{
 		if (map[a] != 0)
-		{
-			if (check >= 1)
-				return (0);
 			check++;
-		}
 	}
-	return (1);
+	sem_post(sem);
+	return (check);
+}
+
+int		isInLst(t_list *lst, int color)
+{
+	t_list *tmp = lst;
+
+	while (tmp)
+	{
+		t_team *team = (t_team *)tmp->content;
+		if (team->color == color)
+			return (1);
+		tmp = tmp->next;
+	}
+	return (0);
 }
 
 void	my_mlx_pixel_put(t_img *data, int x, int y, int color)
@@ -181,7 +193,8 @@ void	draw_big_char(t_vizu *all, int x, int y, char c, int color, int scale)
 		"0001"
 		"0010"
 		"0100"
-		"1111"
+		"1111",
+		
 	};
 
 	if (c < 'A' || c > 'Z')

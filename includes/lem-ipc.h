@@ -51,6 +51,6 @@ typedef struct	t_lem_ipc
 }				t_lem_ipc;
 
 void	move(t_lem_ipc *all, int move_pattern);
-int		is_last(int *map);
+int		is_last(int *map, sem_t *sem);
 
 #endif

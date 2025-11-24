@@ -1,7 +1,8 @@
 #include "../includes/lem-ipc.h"
 #include "../includes/global.h"
+#include <stdio.h>
 
-extern t_lem_ipc *g_all;
+extern int g_is_signal;
 
 void	last_exit(t_lem_ipc *all)
 {
@@ -108,38 +109,16 @@ int is_last_team(t_lem_ipc *all)
 			firstVal = all->map[i];
 		}
 	}
-	if (val == 1)
-	{
-		if (is_last(all->map))
-		{
-			sem_post(all->semaphore);
-			last_exit(all);
-		}
-		all->map[all->pos] = 0;
-	}
 	sem_post(all->semaphore);
 	return (val);
 }
 
-int checkGameStatus2(t_lem_ipc *all)
-{
-	t_msg	message;
-
-	message.ctype = 1;
-	message.command = 1;
-	if (msgrcv(all->msgId, &message, sizeof(message.command), 0, 0) == -1)
-		exit (1);
-	if (msgsnd(all->msgId, &message, sizeof(message.command), 0) == -1)
-		exit (1);
-	return (message.command);
-}
-
-int checkGameStatus(int *map, sem_t *sem)
+int checkGameStatus(t_lem_ipc *all)
 {
 	int status;
-	sem_wait(sem);
-	status = map[MAP_SIZE];
-	sem_post(sem);
+	sem_wait(all->semaphore);
+	status = all->map[MAP_SIZE];
+	sem_post(all->semaphore);
 	return (status);
 }
 
@@ -165,12 +144,6 @@ int	is_dead(t_lem_ipc *all)
 				{
 					if (neightbors[i] == all->map[posCheck])
 					{
-						if (is_last(all->map))
-						{
-							sem_post(all->semaphore);
-							last_exit(all);
-						}
-						all->map[all->pos] = 0;
 						sem_post(all->semaphore);
 						return (1);
 					}
@@ -185,6 +158,20 @@ int	is_dead(t_lem_ipc *all)
 	return (0);
 }
 
+int	checkExitMsg(t_lem_ipc *all)
+{
+	t_msg	message;
+
+	message.ctype = 1;
+	message.command = 1;
+	if (msgrcv(all->msgId, &message, sizeof(message.command), 0, IPC_NOWAIT) != -1)
+	{
+		msgsnd(all->msgId, &message, sizeof(message.command), 0);
+		return (1);
+	}
+	return (0);
+}
+
 void	game(t_lem_ipc *all, int move_pattern)
 {
 	all->pos = getPos(all->map, all->semaphore, all->teamId);
@@ -193,30 +180,26 @@ void	game(t_lem_ipc *all, int move_pattern)
 		ft_putstr_fd("Error: trop de bots sur la map\n", 1);
 		return;
 	}
-	while (!checkGameStatus2(all))
+	while (!checkGameStatus(all) && !checkExitMsg(all) && g_is_signal == 0)
 		usleep(100000);
-	while (!is_dead(all) && !is_last_team(all))
+	while (!is_dead(all) && !is_last_team(all) && !checkExitMsg(all) && g_is_signal == 0)
 	{
-		if (checkGameStatus(all->map, all->semaphore))
+		if (checkGameStatus(all))
 			move(all, move_pattern);
 		usleep(5500000 / MAP_WIDTH);
 	}
+	if (is_last(all->map, all->semaphore) == 1)
+		last_exit(all);
+	sem_wait(all->semaphore);
+	all->map[all->pos] = 0;
+	sem_post(all->semaphore);
 }
 
 void signal_handler(int sig)
 {
     (void)sig;
     ft_putstr_fd("signal recu !\n", 1);
-	sem_wait(g_all->semaphore);
-	if (is_last(g_all->map))
-	{
-		sem_post(g_all->semaphore);
-		last_exit(g_all);
-	}
-	else
-		g_all->map[g_all->pos] = 0;
-	sem_post(g_all->semaphore);
-	exit(1);
+	g_is_signal = 1;
 }
 
 int main(int ac, char **av)
@@ -225,7 +208,7 @@ int main(int ac, char **av)
 	int			move_pattern = 0;
 
 	srand(time(NULL) ^ getpid());
-	g_all = &all;
+	g_is_signal = 0;
 	if (ac < 2 || ft_atoi(av[1]) < 1 || ft_atoi(av[1]) > 10000 || MAP_HEIGHT < 5 ||
 	MAP_HEIGHT > 100 || MAP_HEIGHT != MAP_WIDTH)
 		error_help();
@@ -244,11 +227,7 @@ int main(int ac, char **av)
 	else
 		getShm(&all);
     signal(SIGINT, signal_handler);
-    signal(SIGTERM, signal_handler);
-    signal(SIGQUIT, signal_handler);
-	signal(SIGSEGV, signal_handler);
 	signal(SIGABRT, signal_handler);
-	usleep(10000); 
 	game(&all, move_pattern);
 	shmdt(all.map);
 	shmdt(all.semaphore);

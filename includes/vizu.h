@@ -17,6 +17,12 @@ typedef struct s_img
 	int					endian;
 }						t_img;
 
+typedef struct s_team
+{
+	int color;
+	int botLeft;
+}				t_team;
+
 typedef struct s_vizu
 {
     void    *mlx_ptr;
@@ -30,6 +36,7 @@ typedef struct s_vizu
 }				t_vizu;
 
 void	my_mlx_pixel_put(t_img *data, int x, int y, int color);
+int		isInLst(t_list *lst, int color);
 void	draw_big_text(t_vizu *all, int start_x, int start_y, char *text, int color, int scale);
 
 #endif
