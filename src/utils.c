@@ -196,23 +196,98 @@ void	draw_big_char(t_vizu *all, int x, int y, char c, int color, int scale)
 		"1111",
 		
 	};
+	static const char *digits[10] = {
+		"0110"
+		"1001"
+		"1001"
+		"1001"
+		"0110",   // 0
 
-	if (c < 'A' || c > 'Z')
-		return;
-	const char *glyph = letters[c - 'A'];
+		"0010"
+		"0110"
+		"0010"
+		"0010"
+		"0111",   // 1
 
-	int width = strlen(glyph) / 5;
-	for (int row = 0; row < 5; row++)
+		"0110"
+		"1001"
+		"0010"
+		"0100"
+		"1111",   // 2
+
+		"1110"
+		"0001"
+		"0110"
+		"0001"
+		"1110",   // 3
+
+		"1001"
+		"1001"
+		"1111"
+		"0001"
+		"0001",   // 4
+
+		"1111"
+		"1000"
+		"1110"
+		"0001"
+		"1110",   // 5
+
+		"0111"
+		"1000"
+		"1110"
+		"1001"
+		"0110",   // 6
+
+		"1111"
+		"0001"
+		"0010"
+		"0100"
+		"0100",   // 7
+
+		"0110"
+		"1001"
+		"0110"
+		"1001"
+		"0110",   // 8
+
+		"0110"
+		"1001"
+		"0111"
+		"0001"
+		"1110"    // 9
+	};
+
+	// Letters
+	if (c >= 'A' && c <= 'Z')
 	{
-		for (int col = 0; col < width; col++)
-		{
-			if (glyph[row * width + col] == '1')
-			{
-				for (int i = 0; i < scale; i++)
-					for (int j = 0; j < scale; j++)
-						my_mlx_pixel_put(&all->img, x + col * scale + i, y + row * scale + j, color);
-			}
-		}
+		const char *glyph = letters[c - 'A'];
+		int width = strlen(glyph) / 5;
+
+		for (int row = 0; row < 5; row++)
+			for (int col = 0; col < width; col++)
+				if (glyph[row * width + col] == '1')
+					for (int i = 0; i < scale; i++)
+						for (int j = 0; j < scale; j++)
+							my_mlx_pixel_put(&all->img, x + col * scale + i,
+								y + row * scale + j, color);
+		return;
+	}
+
+	// Digits
+	if (c >= '0' && c <= '9')
+	{
+		const char *glyph = digits[c - '0'];
+		int width = strlen(glyph) / 5;
+
+		for (int row = 0; row < 5; row++)
+			for (int col = 0; col < width; col++)
+				if (glyph[row * width + col] == '1')
+					for (int i = 0; i < scale; i++)
+						for (int j = 0; j < scale; j++)
+							my_mlx_pixel_put(&all->img, x + col * scale + i,
+								y + row * scale + j, color);
+		return;
 	}
 }
 

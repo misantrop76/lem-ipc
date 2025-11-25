@@ -104,6 +104,7 @@ void	insertTeam(t_list **teamOnBoard, t_team **teamInsert)
 			newteam->next = tmp;
 			return;
 		}
+		tmpBefore = tmpBefore->next;
 		tmp = tmp->next;
 	}
 	ft_lstadd_back(teamOnBoard, newteam);
@@ -122,13 +123,19 @@ void printBoard(t_vizu *all, t_list *teamOnBoard)
 {
 	t_list *tmp = teamOnBoard;
 	int i = 0;
-	while (tmp)
+	while (tmp && i < 10)
 	{
 		int x = all->winSize + 10;
 		int y = i * (all->winSize / (ft_lstsize(teamOnBoard) + 10));
+		y += 20;
 		t_team *team = tmp->content;
-		printSquare(x, y + 20, 20, team->color, &all->img);
+		char *number = ft_itoa(team->botLeft);
+		char *str =  ft_strjoin(number, " BOTS LEFT");
+		printSquare(x, y, 20, team->color, &all->img);
+		draw_big_text(all, x + 30, y + 5, str, all->winnerColor, 2);
 		tmp = tmp->next;
+		free(number);
+		free(str);
 		i++;
 	}
 }
@@ -169,16 +176,16 @@ void	updateImg(t_vizu *all)
 	sem_wait(all->lemIpc.semaphore);
 	for (int a = 0; a < MAP_SIZE; a++)
 		mapSnap[a] = all->lemIpc.map[a];
+	sem_post(all->lemIpc.semaphore);
 	for (int x = 0; x < all->winSize; x++)
 	{
 		for (int y = 0; y < all->winSize; y++)
 		{
 			int dx = (int)((float)x * ((float)MAP_WIDTH) / all->winSize);
 			int dy = (int)((float)y * ((float)MAP_WIDTH) / all->winSize);
-			my_mlx_pixel_put(&all->img, x, y, all->lemIpc.map[(dy * MAP_WIDTH) + dx] * (__INT_MAX__ / 1000000));
+			my_mlx_pixel_put(&all->img, x, y, mapSnap[(dy * MAP_WIDTH) + dx] * (__INT_MAX__ / 1000000));
 		}
 	}
-	sem_post(all->lemIpc.semaphore);
 	for (int x = all->winSize; x < all->winSize + 200; x++)
 	{
 		for (int y = 0; y < all->winSize; y++)
@@ -256,6 +263,9 @@ int	vizu_loop(t_vizu *all)
 		int color = GetGameState(all);
 		if (color)
 		{
+			sem_wait(all->lemIpc.semaphore);
+			all->lemIpc.map[MAP_SIZE] = 1;
+			sem_post(all->lemIpc.semaphore);
 			all->winnerColor = color;
 			winnerImage(all);
 		}
