@@ -1,6 +1,6 @@
 # lem-ipc
 
-** Règles générales :**
+# Règles générales
 L’idée est que des joueurs (réunis en équipes) s’affrontent sur un plateau en 2D. Pour qu’une équipe soit victorieuse, elle doit être la dernière encore présente sur le plateau.
 Lorsqu’un joueur meurt, il disparaît du plateau.
 
