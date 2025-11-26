@@ -24,7 +24,6 @@ Le rendu inclut :
 
 ## 🧠 Objectifs pédagogiques
 
-- Manipulation des **processus UNIX** : `fork`, `kill`, `wait`
 - Utilisation des **IPC** :
   - `message queues`
   - `shared memory`
